@@ -1,3 +1,4 @@
+
 #include "FS.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -17,15 +18,15 @@ int pinRed = 15;
 long duration;
 float distance;
 const long utcOffsetInSeconds = -14400;
-const char *ssid = "Network-Happy";
-const char *password = "Conection:)";
+const char *ssid = "";
+const char *password = "";
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 const char *SUBCRIBE_TOPIC = "ucb/esp_in"; // subscribe
 const char *PUBLISH_TOPIC = "ucb/esp_out"; // publish
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
-const char *AWS_endpoint = "a2fltvnbqx3urd-ats.iot.us-east-2.amazonaws.com"; //MQTT broker ip
+const char *AWS_endpoint = ""; //MQTT broker ip
 
 StaticJsonDocument<JSON_OBJECT_SIZE(1)> inputDoc;
 void ledOn()
@@ -98,13 +99,13 @@ void callback(char *topic, byte *payload, unsigned int length)
         if (!err)
         {
             String action = String(inputDoc["action"].as<char *>());
-            if (action == "ON_LED_YELOW")
+            if (action == "ON_LED_YELLOW")
                 digitalWrite(pinYellow, HIGH);
             if (action == "ON_LED_GREEN")
                 digitalWrite(pinGreen, HIGH);
             if (action == "ON_LED_BLUE")
                digitalWrite(pinRed, HIGH);
-            if (action == "OFF_LED_YELOW")
+            if (action == "OFF_LED_YELLOW")
                 digitalWrite(pinYellow, LOW);
             if (action == "OFF_LED_GREEN")
                 digitalWrite(pinGreen, LOW);
@@ -194,14 +195,13 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     setup_wifi();
     delay(1000);
+    dht.begin();
     if (!SPIFFS.begin())
     {
         Serial.println("Failed to mount file system");
         return;
     }
 
-    Serial.print("Heap: ");
-    Serial.println(ESP.getFreeHeap());
     File cert = SPIFFS.open("/cert.der", "r");
     if (!cert)
     {

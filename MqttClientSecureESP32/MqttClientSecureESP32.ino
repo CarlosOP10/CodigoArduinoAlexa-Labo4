@@ -4,7 +4,7 @@
 #include <NTPClient.h>
 #include <DHT.h>
 
-#define DHTPIN 2
+#define DHTPIN 5
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
@@ -17,25 +17,26 @@ long duration;
 float distance;
 const long utcOffsetInSeconds = -14400;
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-const char* WIFI_SSID = "FLIA OLIVERA";
-const char* WIFI_PASS = "BrandonEnano1";
-const char* AWS_ENDPOINT = "a3lzqo3kszwyxj-ats.iot.us-east-2.amazonaws.com";
+const char* WIFI_SSID = "";
+const char* WIFI_PASS = "";
+const char* AWS_ENDPOINT = "";
 const int AWS_ENDPOINT_PORT = 8883;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
-const char* MQTT_CLIENT_ID = "Carlos";
+const char* MQTT_CLIENT_ID = "";
 const char* SUBCRIBE_TOPIC = "ucb/esp_in"; // subscribe
 const char* PUBLISH_TOPIC = "ucb/esp_out"; // publish
 
 const char AMAZON_ROOT_CA1[] PROGMEM = R"EOF(
------BEGIN RSA PRIVATE KEY-----
------END RSA PRIVATE KEY-----
+-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----
 )EOF";
 
 const char CERTIFICATE[] PROGMEM = R"KEY(
------BEGIN RSA PRIVATE KEY-----
------END RSA PRIVATE KEY-----
+-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----
+
 )KEY";
 
 const char PRIVATE_KEY[] PROGMEM = R"KEY(
@@ -138,6 +139,7 @@ void setup() {
 
   mqttClient.setServer(AWS_ENDPOINT, AWS_ENDPOINT_PORT);
   mqttClient.setCallback(callback);
+  dht.begin();
 }
 
 unsigned long previousConnectMillis = 0;
