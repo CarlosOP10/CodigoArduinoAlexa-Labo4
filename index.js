@@ -1,7 +1,7 @@
 // sets up dependencies
 const Alexa = require('ask-sdk-core');
 const AWS = require('aws-sdk');
-const IoTData = new AWS.IotData({endpoint: 'a3lzqo3kszwyxj-ats.iot.us-east-2.amazonaws.com'});
+const IoTData = new AWS.IotData({endpoint: ''});
 
 const TurnOnParams = {
     topic: 'ucb/esp_in',
@@ -364,4 +364,3 @@ exports.handler = Alexa.SkillBuilders.custom()
         ErrorHandler)
     .withCustomUserAgent('sample/hello-world/v1.2')
     .lambda();
-    
