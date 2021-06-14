@@ -233,6 +233,123 @@ const OffLedGreenIntentHandler = {
     }
 };
 
+const ReadSensorsSacabaIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ReadSensorsSacaba';
+    },
+    async handle(handlerInput) {
+
+        let sensors;
+
+        function toggleGarageDoor() {
+          return new Promise((resolve, reject) => {
+            var params = {
+              thingName: 'MCU_SACABA',
+            }
+          
+            IoTData.getThingShadow(params, (err, data) => {
+              if (err){
+                console.log(err, err.stack)
+                reject(`Failed to update thing shadow: ${err.errorMessage}`)
+              }else{
+                resolve(JSON.parse(data.payload))
+              }
+            })
+          })
+        }
+        
+        await toggleGarageDoor()
+            .then((result) => sensors=result.state.desired)
+            .catch((err) => console.log(err))
+        
+        
+        const speakOutput = `En Sacaba la temperatura es ${sensors.temp} °C con un ${sensors.hum} % de humedad y un indice de calor de ${sensors.indCalor}, una distacia de ${sensors.ultrasonic} cm.`;
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(speakOutput)
+            .getResponse();
+    }
+};
+
+const ReadSensorsQuillacolloIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ReadSensorsQuillacollo';
+    },
+    async handle(handlerInput) {
+
+        let sensors;
+
+        function toggleGarageDoor() {
+          return new Promise((resolve, reject) => {
+            var params = {
+              thingName: 'MCU_QUILLACOLLO',
+            }
+          
+            IoTData.getThingShadow(params, (err, data) => {
+              if (err){
+                console.log(err, err.stack)
+                reject(`Failed to update thing shadow: ${err.errorMessage}`)
+              }else{
+                resolve(JSON.parse(data.payload))
+              }
+            })
+          })
+        }
+        
+        await toggleGarageDoor()
+            .then((result) => sensors=result.state.desired)
+            .catch((err) => console.log(err))
+        
+        
+        const speakOutput = `En Quillacollo la temperatura es ${sensors.temp} °C con un ${sensors.hum} % de humedad y un indice de calor de ${sensors.indCalor}, una distacia de ${sensors.ultrasonic} cm.`;
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(speakOutput)
+            .getResponse();
+    }
+};
+
+const ReadSensorsVintoIntentHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'ReadSensorsVinto';
+    },
+    async handle(handlerInput) {
+
+        let sensors;
+
+        function toggleGarageDoor() {
+          return new Promise((resolve, reject) => {
+            var params = {
+              thingName: 'MCU_VINTO',
+            }
+          
+            IoTData.getThingShadow(params, (err, data) => {
+              if (err){
+                console.log(err, err.stack)
+                reject(`Failed to update thing shadow: ${err.errorMessage}`)
+              }else{
+                resolve(JSON.parse(data.payload))
+              }
+            })
+          })
+        }
+        
+        await toggleGarageDoor()
+            .then((result) => sensors=result.state.desired)
+            .catch((err) => console.log(err))
+        
+        
+        const speakOutput = `En Vinto la temperatura es ${sensors.temp} °C con un ${sensors.hum} % de humedad y un indice de calor de ${sensors.indCalor}, una distacia de ${sensors.ultrasonic} cm.`;
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(speakOutput)
+            .getResponse();
+    }
+};
+
 const HelpIntentHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
@@ -355,6 +472,9 @@ exports.handler = Alexa.SkillBuilders.custom()
         OffLedBlueIntentHandler,
         OnLedGreenIntentHandler,
         OffLedGreenIntentHandler,
+        ReadSensorsSacabaIntentHandler,
+        ReadSensorsQuillacolloIntentHandler,
+        ReadSensorsVintoIntentHandler,
         HelpIntentHandler,
         CancelAndStopIntentHandler,
         FallbackIntentHandler,

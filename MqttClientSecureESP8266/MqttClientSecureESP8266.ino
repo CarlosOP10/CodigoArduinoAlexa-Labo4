@@ -1,7 +1,7 @@
-
 #include "FS.h"
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include<WiFiManager.h>  
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <ArduinoJson.h>
@@ -18,15 +18,13 @@ int pinRed = 15;
 long duration;
 float distance;
 const long utcOffsetInSeconds = -14400;
-const char *ssid = "";
-const char *password = "";
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+const char* MQTT_CLIENT_ID = "MCU_NAME";
 const char *SUBCRIBE_TOPIC = "ucb/esp_in"; // subscribe
-const char *PUBLISH_TOPIC = "ucb/esp_out"; // publish
+const char *PUBLISH_TOPIC = "$aws/things/MCU_QUILLACOLLO/shadow/update"; // publish
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
-const char *AWS_endpoint = ""; //MQTT broker ip
+const char *AWS_endpoint = "xxxxxxxxxxx-ats.iot.us-east-2.amazonaws.com"; //MQTT broker ip
 
 StaticJsonDocument<JSON_OBJECT_SIZE(1)> inputDoc;
 void ledOn()
@@ -41,13 +39,6 @@ void ledOff()
 StaticJsonDocument<JSON_OBJECT_SIZE(11)> outputDoc;
 char outputBuffer[512];
 
-void setTime()
-{
-    timeClient.update();
-    outputDoc["day"] = String(daysOfTheWeek[timeClient.getDay()]);
-    outputDoc["hour"] = String(timeClient.getHours());
-    serializeJson(outputDoc, outputBuffer);
-}
 void readDistance()
 {
     digitalWrite(pinTrig, LOW);
@@ -58,7 +49,7 @@ void readDistance()
     duration = pulseIn(pinEcho, HIGH);
     distance = duration * 0.034 / 2;
     long disResult = round(distance*10)/10.0;
-    outputDoc["ultrasonic"] = disResult;
+    outputDoc["state"]["desired"]["ultrasonic"] = disResult;
     serializeJson(outputDoc, outputBuffer);
 }
 
@@ -76,9 +67,9 @@ void readTemp()
     float hicResult = round(hic*10)/10.0;
     float fResult = round(f*10)/10.0;
     float tResult = round(t*10)/10.0;
-    outputDoc["temp"] = tResult;
-    outputDoc["hum"] = fResult;
-    outputDoc["indCalor"] = hicResult;
+    outputDoc["state"]["desired"]["temp"] = tResult;
+    outputDoc["state"]["desired"]["hum"] = fResult;
+    outputDoc["state"]["desired"]["indCalor"] = hicResult;
     serializeJson(outputDoc, outputBuffer);
 }
 
@@ -125,36 +116,9 @@ void callback(char *topic, byte *payload, unsigned int length)
     }
 }
 WiFiClientSecure espClient;
-PubSubClient client(AWS_endpoint, 8883, callback, espClient); //set MQTT port number to 8883 as per //standard
+PubSubClient client(AWS_endpoint, 8883, callback, espClient); 
 long lastMsg = 0;
 int value = 0;
-
-void setup_wifi()
-{
-    delay(10);
-    espClient.setBufferSizes(512, 512);
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    timeClient.begin();
-    while (!timeClient.update())
-    {
-        timeClient.forceUpdate();
-    }
-
-    espClient.setX509Time(timeClient.getEpochTime());
-}
 
 void reconnect()
 {
@@ -162,7 +126,7 @@ void reconnect()
     {
         Serial.print("Attempting MQTT connection...");
         // Attempt to connect
-        if (client.connect("ESPthing"))
+        if (client.connect(MQTT_CLIENT_ID))
         {
             Serial.println("connected");
             client.subscribe("ucb/esp_in");
@@ -184,7 +148,18 @@ void reconnect()
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(115200);  
+    WiFiManager wifiManager;  
+    //wifiManager.resetSettings();
+    wifiManager.autoConnect(MQTT_CLIENT_ID);  
+    Serial.println("Connected.....");
+    
+    timeClient.begin();
+    while(!timeClient.update()){
+      timeClient.forceUpdate();
+    }  
+    espClient.setX509Time(timeClient.getEpochTime());
+    
     pinMode(pinTrig, OUTPUT);
     pinMode(pinEcho, INPUT);
     pinMode(pinYellow, OUTPUT);
@@ -193,8 +168,6 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     Serial.setDebugOutput(true);
     pinMode(LED_BUILTIN, OUTPUT);
-    setup_wifi();
-    delay(1000);
     dht.begin();
     if (!SPIFFS.begin())
     {
@@ -254,7 +227,7 @@ void publishMessage()
 {
     readTemp();
     readDistance();
-    setTime();
+    Serial.println(outputBuffer);
     client.publish(PUBLISH_TOPIC, outputBuffer);
 }
 
@@ -267,7 +240,7 @@ void loop()
     client.loop();
 
     long now = millis();
-    if (now - lastMsg > 2000)
+    if (now - lastMsg > 1000*60*10)
     {
         lastMsg = now;
         publishMessage();

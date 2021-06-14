@@ -1,8 +1,9 @@
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <NTPClient.h>
 #include <DHT.h>
+#include "DNSServer.h"
+#include <WiFiManager.h>
 
 #define DHTPIN 5
 #define DHTTYPE DHT11
@@ -15,18 +16,12 @@ int pinGreen = 2;
 int pinBlue = 15;
 long duration;
 float distance;
-const long utcOffsetInSeconds = -14400;
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-const char* WIFI_SSID = "";
-const char* WIFI_PASS = "";
-const char* AWS_ENDPOINT = "";
+const char* AWS_ENDPOINT = "xxxxxxxxxxxxx-ats.iot.us-east-2.amazonaws.com";
 const int AWS_ENDPOINT_PORT = 8883;
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
-const char* MQTT_CLIENT_ID = "";
+const char* MQTT_CLIENT_ID = "MCU_SACABA";
 const char* SUBCRIBE_TOPIC = "ucb/esp_in"; // subscribe
-const char* PUBLISH_TOPIC = "ucb/esp_out"; // publish
+const char *PUBLISH_TOPIC = "$aws/things/MCU_SACABA/shadow/update"; // publish
 
 const char AMAZON_ROOT_CA1[] PROGMEM = R"EOF(
 -----BEGIN CERTIFICATE-----
@@ -36,7 +31,6 @@ const char AMAZON_ROOT_CA1[] PROGMEM = R"EOF(
 const char CERTIFICATE[] PROGMEM = R"KEY(
 -----BEGIN CERTIFICATE-----
 -----END CERTIFICATE-----
-
 )KEY";
 
 const char PRIVATE_KEY[] PROGMEM = R"KEY(
@@ -116,22 +110,19 @@ boolean mqttClientConnect() {
 }
 
 void setup() {
+  Serial.begin(115200);
+  WiFiManager wifiManager;
+  wifiManager.resetSettings();
+  wifiManager.autoConnect(MQTT_CLIENT_ID,"12345678");
+  
+  Serial.println("Connected.....");
   pinMode(LED_BUILTIN, OUTPUT);
 
-  Serial.begin(115200);
-  Serial.println("Connecting to " + String(WIFI_SSID));
   pinMode(pinTrig, OUTPUT); 
   pinMode(pinEcho, INPUT);
   pinMode(pinYellow,OUTPUT);
   pinMode(pinGreen,OUTPUT);
   pinMode(pinBlue,OUTPUT);
-
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("Can't connect to " + String(WIFI_SSID));
-    while (1) delay (200);
-  }
-  Serial.println("Connected to " + String(WIFI_SSID));
 
   wifiClient.setCACert(AMAZON_ROOT_CA1);
   wifiClient.setCertificate(CERTIFICATE);
@@ -149,13 +140,7 @@ unsigned char counter = 0;
 
 StaticJsonDocument<JSON_OBJECT_SIZE(11)> outputDoc;
 char outputBuffer[512];
-void setTime()
-{
-    timeClient.update();
-    outputDoc["day"] = String(daysOfTheWeek[timeClient.getDay()]);
-    outputDoc["hour"] = String(timeClient.getHours());
-    serializeJson(outputDoc, outputBuffer);
-}
+
 void readDistance()
 {
     digitalWrite(pinTrig, LOW);
@@ -166,7 +151,7 @@ void readDistance()
     duration = pulseIn(pinEcho, HIGH);
     distance = duration * 0.034 / 2;
     long disResult = round(distance*10)/10.0;
-    outputDoc["ultrasonic"] = disResult;
+    outputDoc["state"]["desired"]["ultrasonic"] = disResult;
     serializeJson(outputDoc, outputBuffer);
 }
 
@@ -184,16 +169,16 @@ void readTemp()
     float hicResult = round(hic*10)/10.0;
     float fResult = round(f*10)/10.0;
     float tResult = round(t*10)/10.0;
-    outputDoc["temp"] = tResult;
-    outputDoc["hum"] = fResult;
-    outputDoc["indCalor"] = hicResult;
+    outputDoc["state"]["desired"]["temp"] = tResult;
+    outputDoc["state"]["desired"]["hum"] = fResult;
+    outputDoc["state"]["desired"]["indCalor"] = hicResult;
     serializeJson(outputDoc, outputBuffer);
 }
 
 void publishMessage() {
   readTemp();
   readDistance();
-  setTime();
+  Serial.println(outputBuffer);
   mqttClient.publish(PUBLISH_TOPIC, outputBuffer);
 }
 
@@ -212,7 +197,7 @@ void loop() {
     mqttClient.loop();
     delay(20);
 
-    if (now - previousPublishMillis >= 1000) {
+    if (now - previousPublishMillis >= 1000*60*10) {
       previousPublishMillis = now;
       // Publish message
       publishMessage();
